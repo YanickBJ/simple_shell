@@ -1,4 +1,4 @@
-#include "shell.h"
+#include "mshell.h"
 
 /**
  * fchain - test if current char in buffer is a chain delimeter
