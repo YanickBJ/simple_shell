@@ -1,140 +1,59 @@
-#include "mshell.h"
-
+#include "shell.h"
 /**
- * _strcpy - copies a string
- * @dest: the destination
- * @src: the source
- *
- * Return: pointer to destination
+ * word_count - counts words given a char delimiter
+ * @str: string of words
+ * Return: word count as unsigned int
  */
-char *_strcpy(char *dest, char *src)
+unsigned int word_count(char *str)
 {
-	int i = 0;
+	unsigned int i, wc, flag;
+	char *delims = "\n \t";
 
-	if (dest == src || src == 0)
-		return (dest);
-	while (src[i])
+	for (i = 0, wc = 1, flag = 0; str[i]; i++)
 	{
-		dest[i] = src[i];
-		i++;
+		if (flag == 0 &&
+			  (str[i] == delims[0]
+			|| str[i] == delims[1]
+			|| str[i] == delims[2])
+			&& str[i + 1] != delims[0]
+			&& str[i + 1] != delims[1]
+			&& str[i + 1] != delims[2])
+			flag = 1, wc++;
+		else
+			flag = 0;
 	}
-	dest[i] = 0;
-	return (dest);
+	return (wc);
 }
-
 /**
- * *_strdup - copies the string given as parameter
- * @str: string to duplicate
- * Return: pointer to the copied string (Success), NULL (Error)
+ * _strlen_const - strlen for const strings
+ * @s: string to be measured
+ * Return: length of string
  */
-
-char *_strdup(const char *str)
+int _strlen_const(const char *s)
 {
-	unsigned int i = 0, len = 0;
-	char *d;
+	int i;
 
-	if (str == NULL)
-		return (NULL);
-
-	while (str[len])
-		len++;
-
-	d = malloc(sizeof(char) * (len + 1));
-
-	if (d == NULL)
-		return (NULL);
-
-	while ((d[i] = str[i]) != 0)
-		i++;
-
-	return (d);
+	for (i = 0; s[i] != '\0'; i++)
+		;
+	return (i);
 }
-
 /**
- *_puts - prints an input string
- *@fstr: the string to be printed
- *
- * Return: Nothing
+ * simple_print - allows us to print simple lines
+ * @str: const string to print
  */
-void _puts(char *fstr)
+void simple_print(const char *str)
 {
-	int i = 0;
+	int len;
 
-	if (!fstr)
-		return;
-	while (fstr[i] != '\0')
-	{
-		_putchar(fstr[i]);
-		i++;
-	}
+	len = _strlen_const(str);
+	write(STDOUT_FILENO, str, len);
 }
-
 /**
- * _putchar - writes the character c to stdout
- * @c: The character to print
- *
- * Return: On success 1.
- * On error, -1 is returned, and errno is set appropriately.
+ * _isdigit - checks if chars are digits
+ * @c: char to check
+ * Return: 1 if yes, 0 if no
  */
-int _putchar(char c)
+int _isdigit(int c)
 {
-	static int i;
-	static char buf[FWBUF_SIZE];
-
-	if (c == FBUF_FLUSH || i >= FWBUF_SIZE)
-	{
-		write(1, buf, i);
-		i = 0;
-	}
-	if (c != FBUF_FLUSH)
-		buf[i++] = c;
-	return (1);
-}
-
-/**
- * **strtow - splits a string into words. Repeat delimiters are ignored
- * @fstr: the input string
- * @d: the delimeter string
- * Return: a pointer to an array of strings, or NULL on failure
- */
-
-char **strtow(char *fstr, char *d)
-{
-	int i, j, k, m, numwords = 0;
-	char **s;
-
-	if (fstr == NULL || fstr[0] == 0)
-		return (NULL);
-	if (!d)
-		d = " ";
-	for (i = 0; fstr[i] != '\0'; i++)
-		if (!fdelim(fstr[i], d) && (fdelim(fstr[i + 1], d) || !fstr[i + 1]))
-			numwords++;
-
-	if (numwords == 0)
-		return (NULL);
-	s = malloc((1 + numwords) * sizeof(char *));
-	if (!s)
-		return (NULL);
-	for (i = 0, j = 0; j < numwords; j++)
-	{
-		while (fdelim(fstr[i], d))
-			i++;
-		k = 0;
-		while (!fdelim(fstr[i + k], d) && fstr[i + k])
-			k++;
-		s[j] = malloc((k + 1) * sizeof(char));
-		if (!s[j])
-		{
-			for (k = 0; k < j; k++)
-				free(s[k]);
-			free(s);
-			return (NULL);
-		}
-		for (m = 0; m < k; m++)
-			s[j][m] = fstr[i++];
-		s[j][m] = 0;
-	}
-	s[j] = NULL;
-	return (s);
+	return ((c >= '0' && c <= '9') ? 1 : 0);
 }

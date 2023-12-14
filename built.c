@@ -1,81 +1,125 @@
-#include "mshell.h"
-
+#include "shell.h"
 /**
- * _fhistory - displays the history list, one command by line, preceded
- *              with line numbers, starting at 0.
- * @finfo: Structure containing potential arguments. Used to maintain
- *        constant function prototype.
- *  Return: Always 0
- */
-int _fhistory(finfo_a *finfo)
+  * is_builtin - checks if cmd is a builtin
+  * @cmd: command to find
+  * Return: On success - pointer to function, On Failure - NULL pointer
+ (* other useful shell builtins:
+ (* pwd, echo, pushd, popd, type
+ (* * requires ^Z
+ (* fg, bg
+ (*  * Requires ^R
+ (* reverse-i-search **HISTORY**
+*/
+int (*is_builtin(char *cmd))()
 {
-	_fprintlist((*finfo).history);
+	unsigned int i;
+	builtin_cmds_t builds[] = {
+		{"alias", _alias},
+		{"cd", _cd},
+		{"env", _env},
+		{"exit", _exit_with_grace},
+		{"history", _history},
+		{"setenv", _setenv_usr},
+		{"bowie", bowie},
+		{NULL, NULL}
+	};
+
+	i = 0;
+	while (*builds[i].fun != NULL)
+	{
+		if (_strncmp(builds[i].cmd_str, cmd, _strlen(builds[i].cmd_str)) == 0)
+			return (builds[i].fun);
+		i++;
+	}
+	return (NULL);
+}
+/**
+  * _exit_with_grace - Frees any remaining malloc'd spaces, and exits
+  * @linkedlist_path: Linked list to free.
+  * @buffer: buffer to free
+  * @tokens: Check for other inputs
+ (* * CHANGE TO VARIADIC LIST.
+  * Return: -1 if exit fails.
+  */
+int _exit_with_grace(char **tokens, env_t *linkedlist_path, char *buffer)
+{
+	unsigned char exit_status;
+	int i;
+
+	for (i = 0; tokens[1] && tokens[1][i]; i++)
+	{
+		if (!_isdigit(tokens[1][i]))
+		{
+			simple_print("numeric argument required, exiting\n");
+			break;
+		}
+	}
+	exit_status = tokens[1] && i >= _strlen(tokens[1]) ? _atoi(tokens[1]) : 0;
+	if (linkedlist_path && buffer && tokens)
+	{
+		free_list(linkedlist_path);
+		linkedlist_path = NULL;
+		free(buffer);
+		buffer = NULL;
+		free(tokens);
+		tokens = NULL;
+	}
+	exit(exit_status);
+	return (-1);
+}
+/**
+  * _env - prints out the current environment
+  * @tokens: tokenized strings
+  * @environment: linked list environment
+  * Return: 0 on success, -1 on catastrophic failure
+  */
+int _env(char **tokens, env_t *environment)
+{
+	char **envir;
+
+	if (tokens[1])
+		simple_print("No arguments are necessary\n");
+	envir = environ;
+	if (!envir || !environ)
+		return (-1);
+	for ( ; *envir; envir++)
+	{
+		write(STDOUT_FILENO, *envir, _strlen(*envir));
+		write(STDOUT_FILENO, "\n", 1);
+	}
+	environment++;
 	return (0);
 }
-
 /**
- * unset_falias - sets falias to string
- * @finfo: parameter struct
- * @fstr: the string falias
- *
- * Return: Always 0 on success, 1 on error
- */
-int unset_falias(finfo_a *finfo, char *fstr)
+  * _cd - changes working directory
+  * @tokens: argument list
+  * Return: 0 on success
+  */
+int _cd(char **tokens)
 {
-	char *f, c;
-	int fret;
+	char *target;
+	char pwd[BUFSIZE];
+	char *home;
 
-	f = _strchr(fstr, '=');
-	if (!f)
-		return (1);
-	c = *f;
-	*f = 0;
-	fret = fdelete_node_at_ind(&((*finfo).falias),
-		get_node_ind((*finfo).falias, fnode_starts_with((*finfo).falias, fstr, -1)));
-	*f = c;
-	return (fret);
-}
-
-/**
- * set_falias - sets falias to string
- * @finfo: parameter struct
- * @fstr: the string falias
- *
- * Return: Always 0 on success, 1 on error
- */
-int set_falias(finfo_a *finfo, char *fstr)
-{
-	char *f;
-
-	f = _strchr(fstr, '=');
-	if (!f)
-		return (1);
-	if (!*++f)
-		return (unset_falias(finfo, fstr));
-
-	unset_falias(finfo, fstr);
-	return (fadd_node_end(&((*finfo).falias), fstr, 0) == NULL);
-}
-
-/**
- * print_falias - prints an falias string
- * @node: the falias node
- *
- * Return: Always 0 on success, 1 on error
- */
-int print_falias(list_t *node)
-{
-	char *f = NULL, *a = NULL;
-
-	if (node)
+	home = _getenv("HOME");
+	if (tokens[1])
 	{
-		f = _strchr((*node).fstr, '=');
-		for (a = (*node).fstr; a <= f; a++)
-			_putchar(*a);
-		_putchar('\'');
-		_puts(f + 1);
-		_puts("'\n");
-		return (0);
+		if (tokens[1][0] == '~' && !tokens[1][1])
+			target = home;
+		else if (tokens[1][0] == '-' && !tokens[1][1])
+			target = _getenv("OLDPWD");
+		else
+			target = tokens[1];
 	}
-	return (1);
+	else
+		target = home;
+	if (target == home)
+		chdir(target);
+	else if (access(target, F_OK | R_OK) == 0)
+		chdir(target);
+	else
+		simple_print("Could not find directory\n");
+	setenv("OLDPWD", _getenv("PWD"), 1);
+	setenv("PWD", getcwd(pwd, sizeof(pwd)), 1);
+	return (0);
 }
